@@ -128,72 +128,13 @@ pub(crate) fn is_cjk_lang(lang_or_locale: &str) -> bool {
     matches!(lang.as_str(), "zh" | "ja" | "ko")
 }
 
-fn resolve_lang(saved_lang: &str, locale: &str, cjk_fallback: bool) -> String {
-    let locale = locale.to_lowercase();
-    let mut lang = saved_lang.to_lowercase();
-    if cjk_fallback && is_cjk_lang(&lang) {
-        return "en".to_owned();
-    }
+fn resolve_lang(saved_lang: &str, _locale: &str, _cjk_fallback: bool) -> String {
+    let lang = saved_lang.to_lowercase();
+    // اگر کاربر در تنظیمات دستی زبانی انتخاب نکرده، پیش‌فرض همیشه فارسی باشد
     if lang.is_empty() {
-        // zh_CN on Linux, zh-Hans-CN on mac, zh_CN_#Hans on Android
-        if locale.starts_with("zh") {
-            lang = (if locale.contains("tw") {
-                "zh-tw"
-            } else {
-                "zh-cn"
-            })
-            .to_owned();
-            // Hong Kong, Macao and the Hant script use Traditional Chinese.
-            if !locale.contains("hans") && ["hk", "mo", "hant"].iter().any(|x| locale.contains(x)) {
-                lang = "zh-tw".to_owned();
-            }
-        }
+        return "fa".to_owned();
     }
-    if lang.is_empty() {
-        // pt_PT on Linux, pt-PT on mac, pt_PT on Android.
-        // Per CLDR locale inheritance, every Portuguese-speaking locale
-        // besides bare "pt" and Brazil's own variants (pt-BR/pt_BR) has
-        // pt-PT as its parent (Angola, Mozambique, Cape Verde, etc.),
-        // so it should resolve to European Portuguese.
-        if locale.starts_with("pt") {
-            lang = (if locale == "pt" || locale.starts_with("pt-br") || locale.starts_with("pt_br") {
-                "pt-br"
-            } else {
-                "pt-pt"
-            })
-            .to_owned();
-        }
-    }
-    if lang.is_empty() {
-        lang = locale
-            .split("-")
-            .next()
-            .map(|x| x.split("_").next().unwrap_or_default())
-            .unwrap_or_default()
-            .to_owned();
-        // The Kazakh and Georgian tables are keyed by country code, not by language code.
-        if lang == "kk" {
-            lang = "kz".to_owned();
-        } else if lang == "ka" {
-            lang = "ge".to_owned();
-        }
-        // Android 14 and older report Hebrew and Indonesian with their legacy codes (iw_IL, in_ID).
-        if lang == "iw" {
-            lang = "he".to_owned();
-        } else if lang == "in" {
-            lang = "id".to_owned();
-        }
-        // Norwegian also comes as the macrolanguage code (no_NO) or as Nynorsk (nn_NO);
-        // the only Norwegian table is Bokmål.
-        if lang == "no" || lang == "nn" {
-            lang = "nb".to_owned();
-        }
-    }
-    if cjk_fallback && is_cjk_lang(&lang) {
-        "en".to_owned()
-    } else {
-        lang
-    }
+    lang
 }
 
 #[cfg(not(any(target_os = "android", target_os = "ios")))]
